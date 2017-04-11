@@ -1,0 +1,20 @@
+{
+    "name": "whitelabeled/tradedoubler-api-client",
+    "description": "TradeDoubler API client",
+    "type": "library",
+    "require": {
+        "nategood/httpful": "^0.2.20"
+    },
+    "license": "MIT",
+    "autoload": {
+        "psr-4": {
+            "whitelabeled\\TradeDoublerApi\\": "src"
+        }
+    },
+    "authors": [
+        {
+            "name": "Whitelabeled",
+            "email": "info@whitelabeled.nl"
+        }
+    ]
+}
