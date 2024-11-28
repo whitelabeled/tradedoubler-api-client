@@ -3,9 +3,9 @@
 namespace whitelabeled\TradeDoublerApi;
 
 use DateTime;
-use Httpful\Request;
 
-class TradeDoublerClient {
+class TradeDoublerClient
+{
     /**
      * @var string Organization ID
      */
@@ -36,7 +36,8 @@ class TradeDoublerClient {
      * @param $organizationId string Organization ID
      * @param $token          string Token
      */
-    public function __construct($organizationId, $token) {
+    public function __construct($organizationId, $token)
+    {
         $this->organizationId = $organizationId;
         $this->token = $token;
     }
@@ -44,34 +45,43 @@ class TradeDoublerClient {
     /**
      * Get all transactions from $startDate until $endDate.
      *
-     * @param DateTime      $startDate Start date
-     * @param DateTime|null $endDate   End date, optional (defaults to today)
+     * @param DateTime $startDate Start date
+     * @param DateTime|null $endDate End date, optional (defaults to today)
      * @return array Transaction objects. Each part of a transaction is returned as a separate Transaction.
      */
-    public function getTransactions(DateTime $startDate, DateTime $endDate = null) {
+    public function getTransactions(DateTime $startDate, DateTime $endDate = null)
+    {
         if ($endDate == null) {
             $endDate = new DateTime();
         }
 
         $params = [
-            'dateSelectionType'       => 1,
-            'startTimeHrs'            => 0,
-            'endTimeHrs'              => 0,
+            'dateSelectionType' => 1,
+            'startTimeHrs' => 0,
+            'endTimeHrs' => 0,
             'filterOnTimeHrsInterval' => 'true',
-            'event_id'                => 0,
-            'currencyId'              => $this->currency,
-            'latestDayToExecute'      => 0,
-            'startDate'               => $startDate->format('d-m-Y'),
-            'endDate'                 => $endDate->format('d-m-Y'),
-            'organizationId'          => $this->organizationId,
-            'key'                     => $this->token,
+            'event_id' => 0,
+            'currencyId' => $this->currency,
+            'latestDayToExecute' => 0,
+            'startDate' => $startDate->format('d-m-Y'),
+            'endDate' => $endDate->format('d-m-Y'),
+            'organizationId' => $this->organizationId,
+            'key' => $this->token,
         ];
 
         $query = '&' . http_build_query($params);
         $response = $this->makeRequest($this->reportMethod, $query);
 
         $transactions = [];
-        $transactionsData = $response->body->matrix->rows->row;
+
+        // Decode XML:
+        $xml = simplexml_load_string($response->getBody());
+
+        if ($xml == null) {
+            throw new \Exception('Failed to parse XML response');
+        }
+
+        $transactionsData = $xml->matrix->rows->row;
 
         if ($transactionsData != null) {
             foreach ($transactionsData as $transactionData) {
@@ -83,15 +93,26 @@ class TradeDoublerClient {
         return $transactions;
     }
 
-    protected function makeRequest($resource, $query = "") {
-        $uri = $this->endpoint . $resource;
+    /**
+     * @param $resource
+     * @param $query
+     * @return \Psr\Http\Message\ResponseInterface
+     * @throws \GuzzleHttp\Exception\GuzzleException
+     */
+    protected function makeRequest($resource, $query = "")
+    {
+        $uri = $this->endpoint . $resource . '?' . $query;
 
-        $request = Request::get($uri . $query)->expectsXml();
-        $response = $request->send();
+        $client = new \GuzzleHttp\Client();
+        $response = $client->request('GET', $uri, [
+            'headers' => [
+                'Accept' => 'application/xml',
+            ],
+        ]);
 
-        // Check for errors
-        if ($response->hasErrors() || $response->content_type != 'text/xml') {
-            throw new \Exception('Invalid data');
+        // Check status code:
+        if ($response->getStatusCode() != 200) {
+            throw new \Exception('Request failed with status code ' . $response->getStatusCode());
         }
 
         return $response;

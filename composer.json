@@ -3,7 +3,9 @@
     "description": "TradeDoubler API client",
     "type": "library",
     "require": {
-        "nategood/httpful": "^0.2.20"
+        "php": ">=7.4",
+        "guzzlehttp/guzzle": "^7.9",
+        "ext-simplexml": "*"
     },
     "license": "MIT",
     "autoload": {
